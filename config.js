@@ -1,17 +1,15 @@
-// Configuration PUBLIQUE Firebase (console Firebase > Paramètres du projet > Vos applications).
-// Aucun mot de passe, clé privée ou clé de compte de service ne doit être placé ici.
+// Configuration Web publique Firebase de Lisière.
+// Aucun mot de passe ni clé privée dans ce fichier.
+// Analytics non chargé ; Open Library utilisé sans clé Google Books.
 export const CONFIG = Object.freeze({
-  firebase: {
-    apiKey: '',
-    authDomain: '',
-    projectId: '',
-    storageBucket: '',
-    messagingSenderId: '',
-    appId: ''
+  "firebase": {
+    "apiKey": "AIzaSyBTQxThN5X5Tgm0v0_nYVsfsctgdpAA4lY",
+    "authDomain": "lisiere-61fef.firebaseapp.com",
+    "projectId": "lisiere-61fef",
+    "storageBucket": "lisiere-61fef.firebasestorage.app",
+    "messagingSenderId": "545240795459",
+    "appId": "1:545240795459:web:1196522db303855adfc7f6"
   },
-  // UID de l'unique lectrice (Authentication > Users). Reporter aussi cet UID dans firestore.rules.
-  ownerUid: '',
-  // Facultatif : clé Google Books PUBLIQUE, limitée aux domaines et à la seule Books API.
-  // Sans cette clé, Open Library est utilisé. Ne pas mettre de clé IA ici.
-  googleBooksApiKey: ''
+  "ownerUid": "Ip5pI839d4WwxI818ujNyH4a2xl1",
+  "googleBooksApiKey": ""
 });
