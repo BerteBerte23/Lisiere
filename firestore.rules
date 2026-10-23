@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  // Refuse tout accès tant que cet UID n'a pas été remplacé.
+  function owner(uid) {
+   return request.auth != null && request.auth.uid == uid
+    && request.auth.uid == 'REMPLACER_PAR_UID_LECTRICE';
+  }
+  function short(s,n) { return s is string && s.size() <= n; }
+  function dateText(s) { return short(s,10) && (s == '' || s.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')); }
+  function textList(v,n,max) {
+   return v is list && v.size() <= max
+    && (v.size() <= 0 || short(v[0],n))
+    && (v.size() <= 1 || short(v[1],n))
+    && (v.size() <= 2 || short(v[2],n))
+    && (v.size() <= 3 || short(v[3],n))
+    && (v.size() <= 4 || short(v[4],n))
+    && (v.size() <= 5 || short(v[5],n))
+    && (v.size() <= 6 || short(v[6],n))
+    && (v.size() <= 7 || short(v[7],n))
+    && (v.size() <= 8 || short(v[8],n))
+    && (v.size() <= 9 || short(v[9],n))
+    && (v.size() <= 10 || short(v[10],n))
+    && (v.size() <= 11 || short(v[11],n))
+   ;
+  }
+  function valid(d,id) {
+   return d.keys().hasAll(['id','title','authors','genres','description','publisher','published','pages','isbn','cover','status','owned','wish','series','volume','rating','notes','started','finished','source','createdAt','updatedAt'])
+    && d.keys().hasOnly(['id','title','authors','genres','description','publisher','published','pages','isbn','cover','status','owned','wish','series','volume','rating','notes','started','finished','source','createdAt','updatedAt'])
+    && short(d.id,100) && d.id == id && d.id.matches('^[a-zA-Z0-9_-]+$')
+    && short(d.title,250) && d.title.size() > 0
+    && textList(d.authors,120,10)
+    && textList(d.genres,60,12)
+    && short(d.description,12000) && short(d.notes,10000)
+    && short(d.publisher,200) && short(d.published,40)
+    && d.pages is int && d.pages >= 0 && d.pages <= 50000
+    && short(d.isbn,13) && (d.isbn == '' || d.isbn.matches('^([0-9]{13}|[0-9]{9}[0-9X])$'))
+    && short(d.cover,2000) && (d.cover == '' || d.cover.matches('^https://(books[.]google[.]com|books[.]google[.]fr|books[.]googleusercontent[.]com|covers[.]openlibrary[.]org)/.*$'))
+    && d.status in ['unread','reading','read'] && d.owned is bool && d.wish is bool
+    && short(d.series,200) && d.volume is int && d.volume >= 0 && d.volume <= 10000
+    && d.rating is int && d.rating >= 0 && d.rating <= 5
+    && dateText(d.started) && dateText(d.finished)
+    && (d.started == '' || d.finished == '' || d.started <= d.finished)
+    && d.source in ['Google Books','Open Library','Manuel']
+    && short(d.createdAt,40) && short(d.updatedAt,40)
+    && d.createdAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*$')
+    && d.updatedAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*$');
+  }
+  match /users/{uid}/books/{id} {
+   allow read, delete: if owner(uid);
+   allow create: if owner(uid) && valid(request.resource.data,id);
+   allow update: if owner(uid) && valid(request.resource.data,id)
+    && request.resource.data.createdAt == resource.data.createdAt;
+  }
+  match /{document=**} { allow read, write: if false; }
+ }
+}
