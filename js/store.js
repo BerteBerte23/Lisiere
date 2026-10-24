@@ -1,5 +1,5 @@
 import {CONFIG} from '../config.js';
-import {normalizeBook} from './model.js';
+import {normalizeBook,safeImage} from './model.js';
 const KEY='lisiere-local-v1';let mode='none',books=[],db,auth,fs,fa,stop,notify=()=>{},session=0;
 export const configured=()=>Boolean(CONFIG.firebase.apiKey&&CONFIG.firebase.projectId&&CONFIG.firebase.authDomain&&CONFIG.firebase.appId&&CONFIG.ownerUid);
 export const getState=()=>({mode,books:[...books],email:auth?.currentUser?.email||''});
@@ -14,3 +14,28 @@ export async function logout(){stop?.();session++;books=[];mode='none';emit();if
 export async function saveBook(raw){const b=normalizeBook(raw);if(mode==='local'){const next=books.filter(x=>x.id!==b.id).concat(b);try{localStorage.setItem(KEY,JSON.stringify(next))}catch{throw Error('Stockage local plein ou bloqué. Exportez votre bibliothèque.')}books=next;emit();return b}if(mode!=='cloud'||auth.currentUser?.uid!==CONFIG.ownerUid)throw Error('Connectez-vous avant d’enregistrer.');await fs.setDoc(fs.doc(db,'users',auth.currentUser.uid,'books',b.id),b);return b}
 export async function removeBook(id){if(mode==='local'){const next=books.filter(b=>b.id!==id);localStorage.setItem(KEY,JSON.stringify(next));books=next;emit();return}if(mode!=='cloud'||auth.currentUser?.uid!==CONFIG.ownerUid)throw Error('Connexion nécessaire.');await fs.deleteDoc(fs.doc(db,'users',auth.currentUser.uid,'books',id))}
 export async function importBooks(items){if(mode==='none')throw Error('Connectez-vous ou activez le mode local.');const currentSession=session;for(const b of items){if(currentSession!==session)throw Error('Session modifiée : import interrompu.');await saveBook(b)}}
+
+// Modification ciblée : jamais de création ni de remplacement des autres champs.
+export async function updateCover(id,url){
+ const cover=safeImage(url);
+ if(!/^[a-zA-Z0-9_-]{1,100}$/.test(id)||!cover||cover.length>2000)throw Error('Couverture invalide.');
+ const updatedAt=new Date().toISOString();
+ if(mode==='local'){
+  const b=books.find(b=>b.id===id);
+  if(!b)throw Error('Ce livre n’existe plus.');
+  if(b.cover)throw Error('Une couverture a déjà été ajoutée. Elle a été conservée.');
+  const next=books.map(b=>b.id===id?{...b,cover,updatedAt}:b);
+  try{localStorage.setItem(KEY,JSON.stringify(next))}catch{throw Error('Stockage local plein ou bloqué. Exportez votre bibliothèque.')}
+  books=next;emit();return;
+ }
+ if(mode!=='cloud'||auth?.currentUser?.uid!==CONFIG.ownerUid)throw Error('Connectez-vous avant d’enregistrer.');
+ const currentSession=session,uid=auth.currentUser.uid;
+ const ref=fs.doc(db,'users',uid,'books',id);
+ await fs.runTransaction(db,async tx=>{
+  const snapshot=await tx.get(ref);
+  if(currentSession!==session||mode!=='cloud'||auth.currentUser?.uid!==uid)throw Error('Session modifiée : enregistrement annulé.');
+  if(!snapshot.exists())throw Error('Ce livre n’existe plus.');
+  if(snapshot.data().cover)throw Error('Une couverture a déjà été ajoutée. Elle a été conservée.');
+  tx.update(ref,{cover,updatedAt});
+ });
+}

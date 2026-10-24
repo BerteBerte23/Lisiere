@@ -2,7 +2,7 @@ export const GENRES=['Roman','Policier / Thriller','Romance','New Romance','Fant
 export const STATUSES={unread:'Non lu',reading:'En cours',read:'Terminé'};
 export const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 export const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function safeImage(url){try{const u=new URL(url);return u.protocol==='https:'&&['books.google.com','books.google.fr','books.googleusercontent.com','covers.openlibrary.org'].includes(u.hostname)?u.href:''}catch{return ''}}
+export function safeImage(url){try{const u=new URL(url);return u.protocol==='https:'&&['books.google.com','books.google.fr','books.googleusercontent.com','covers.openlibrary.org','iadice.com',...Array.from({length:5},(_,i)=>`is${i+1}-ssl.mzstatic.com`)].includes(u.hostname)?u.href:''}catch{return ''}}
 export function validISBN(value){const s=String(value).replace(/[-\s]/g,'').toUpperCase();if(/^\d{13}$/.test(s))return /^97[89]/.test(s)&&[...s].reduce((a,c,i)=>a+Number(c)*(i%2?3:1),0)%10===0;if(/^\d{9}[\dX]$/.test(s))return [...s].reduce((a,c,i)=>a+(c==='X'?10:Number(c))*(10-i),0)%11===0;return false}
 export function normalizeBook(raw,{keepId=true}={}){
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('Fiche invalide.');
