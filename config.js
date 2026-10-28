@@ -23,7 +23,8 @@ export const CONFIG = Object.freeze({
       "uid": "zv1huPM37lVmr9tbpsCCzl5Bfj72",
       "label": "Quentin",
       "gender": "masculin",
-      "palette": "slate"
+      "palette": "slate",
+      "media": true
     }
   ]
 });

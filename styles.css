@@ -11,3 +11,16 @@
 @media(prefers-color-scheme:dark){:root[data-palette="slate"]{--bg:#171f2b;--paper:#202c3b;--ink:#edf2f8;--muted:#b3c1d2;--line:#46566b;--accent:#a5c8ec;--soft:#2b3d53;--accent-ink:#14283f}}
 :root[data-palette="slate"] .primary,:root[data-palette="slate"] .shelves .active,:root[data-palette="slate"] .tabs .active,:root[data-palette="slate"] .brand-icon{background:var(--accent);color:var(--accent-ink)}
 :root[data-palette="slate"] .toast{background:var(--ink);color:var(--paper)}
+
+/* Films et séries : visibles uniquement sur le compte habilité. */
+[hidden]{display:none!important}
+.media-tabs{display:flex;gap:8px;border-bottom:1px solid var(--line);padding:4px 0 20px;margin-bottom:24px}
+.media-tabs button{flex:1;min-width:0;display:flex;gap:8px;justify-content:center;align-items:center;padding:12px 8px}
+.media-tabs button.active{background:var(--accent);color:var(--accent-ink,#fff);border-color:var(--accent)}
+.media-tabs span{font-size:.8em;opacity:.85}
+.media-credit{margin-top:32px;line-height:1.6}
+.media-result{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:12px}
+.media-result .result{width:100%}.media-result .hint{margin:6px 0}
+.media-text{white-space:pre-wrap;overflow-wrap:anywhere}
+#mediaLibrary a,#modalBody a{color:var(--accent);text-underline-offset:3px}
+@media(max-width:420px){.media-tabs{gap:5px}.media-tabs button{font-size:.9rem}.media-tabs span{font-size:.75em}}

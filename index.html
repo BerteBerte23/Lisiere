@@ -20,12 +20,14 @@
 <main id="main" tabindex="-1">
 <section class="intro"><div><p class="eyebrow">LE PLAISIR DE GARDER UNE TRACE</p><h1>Un livre.<br>Et tout un monde.</h1><p class="lede">Les histoires que vous avez aimées.<br>Celles qui vous attendent encore.</p></div><div class="intro-side"><span class="line-art" aria-hidden="true">L.</span><p id="collectionCount">Votre bibliothèque personnelle</p><button id="addBtn" class="primary">＋ Ajouter un livre</button></div></section>
 <div id="connection" class="connection" role="status"></div>
-<section aria-label="Organiser la bibliothèque" class="library">
+<nav id="mediaTabs" class="media-tabs" aria-label="Types d’histoires" hidden></nav>
+<section id="bookLibrary" aria-label="Organiser la bibliothèque" class="library">
 <nav class="shelves" aria-label="Espaces de lecture"><button data-shelf="all" class="active" aria-pressed="true">Tout <span>0</span></button><button data-shelf="read" aria-pressed="false">Déjà lus <span>0</span></button><button data-shelf="owned" aria-pressed="false">Ma pile à lire <span>0</span></button><button data-shelf="wish" aria-pressed="false">Mes envies <span>0</span></button></nav>
 <div class="toolbar"><label class="search-label"><span class="sr-only">Rechercher dans ma bibliothèque</span><input id="librarySearch" type="search" placeholder="Un titre, un auteur, une série…" maxlength="200"></label><label><span>Genre</span><select id="genreFilter"><option value="">Tous les genres</option></select></label><label><span>Lecture</span><select id="progressFilter"><option value="">Toutes</option><option value="reading">En cours</option><option value="unread">Non lus</option><option value="read">Terminés</option></select></label><label><span>Trier par</span><select id="sortOrder"><option value="recent">Ajout récent</option><option value="author">Auteur · A à Z</option><option value="title">Titre · A à Z</option><option value="series">Série et tome</option><option value="rating">Mieux notés</option></select></label></div>
 <div class="section-heading"><h2 id="shelfTitle">Toute ma bibliothèque</h2><p id="resultCount"></p></div>
 <div id="bookGrid" class="book-grid"></div>
 </section>
+<section id="mediaLibrary" aria-label="Films et séries" class="library" hidden></section>
 <footer>Une place pour chaque histoire.<span>Lisière · Bibliothèque personnelle</span></footer>
 </main>
 <dialog id="modal" aria-labelledby="modalTitle"><div class="modal-top"><h2 id="modalTitle"></h2><button id="closeModal" class="icon-button" aria-label="Fermer">×</button></div><div id="modalBody"></div></dialog>
