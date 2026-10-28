@@ -1,0 +1,23 @@
+// Modèle séparé : aucun ajout de champ ni migration des documents books.
+import {esc,norm} from './model.js';
+export {esc};
+export const MEDIA_STATUSES={unwatched:'À voir',watching:'En cours',watched:'Vu / terminé'};
+export function safePoster(url){if(typeof url!=="string"||url.length>2000)return "";try{const u=new URL(url);return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&(/^(is[1-5]-ssl[.]mzstatic[.]com|static[.]tvmaze[.]com|upload[.]wikimedia[.]org|thumb[.]wikimedia[.]org)$/.test(u.hostname))?u.href:''}catch{return ''}}
+export function safeSource(url,source){if(typeof url!=="string"||url.length>2000)return "";try{const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password||u.port)return '';return (source==='TVmaze'&&u.hostname==='www.tvmaze.com'||source==='Apple Movies'&&['itunes.apple.com','tv.apple.com'].includes(u.hostname)||source==='Wikipédia'&&['fr.wikipedia.org','en.wikipedia.org'].includes(u.hostname))?u.href:''}catch{return ''}}
+
+export function safeAttribution(url,type){try{const u=new URL(url);return typeof url==='string'&&url.length<=2000&&u.protocol==='https:'&&!u.username&&!u.password&&!u.port&& (type==='license'?u.hostname==='creativecommons.org':['commons.wikimedia.org','fr.wikipedia.org','en.wikipedia.org'].includes(u.hostname))?u.href:''}catch{return ''}}
+export function normalizeMedia(raw){
+ if(!raw||typeof raw!=='object'||Array.isArray(raw)||!['movie','series'].includes(raw.kind))throw Error('Type de fiche invalide.');
+ const text=(k,n)=>String(raw[k]??'').trim().slice(0,n),integer=(k,n)=>Math.max(0,Math.min(n,Math.floor(Number(raw[k])||0)));
+ const list=(k,n,max)=>[...new Set((Array.isArray(raw[k])?raw[k]:String(raw[k]||'').split(';')).map(x=>String(x).trim().slice(0,n)).filter(Boolean))].slice(0,max);
+ const title=text('title',250);if(!title)throw Error('Le titre est obligatoire.');
+ const date=k=>{const s=text(k,10);return /^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(Date.parse(s))?s:''};
+ const now=new Date().toISOString(),source=['Apple Movies','TVmaze','Wikipédia'].includes(raw.source)?raw.source:'Manuel';
+ const m={id:/^[a-zA-Z0-9_-]{1,100}$/.test(raw.id||'')?raw.id:crypto.randomUUID(),kind:raw.kind,title,creators:list('creators',120,10),genres:list('genres',60,12),year:text('year',4).replace(/[^0-9]/g,''),description:text('description',12000),poster:safePoster(raw.poster),status:Object.hasOwn(MEDIA_STATUSES,raw.status)?raw.status:'unwatched',season:raw.kind==='series'?integer('season',10000):0,episode:raw.kind==='series'?integer('episode',100000):0,rating:integer('rating',5),notes:text('notes',10000),started:date('started'),finished:date('finished'),source,imageCredit:text('imageCredit',500),imageSourceUrl:safeAttribution(raw.imageSourceUrl,'file'),imageLicenseUrl:safeAttribution(raw.imageLicenseUrl,'license'),catalogId:text('catalogId',100),sourceUrl:safeSource(raw.sourceUrl,source),createdAt:typeof raw.createdAt==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(raw.createdAt)&&!isNaN(Date.parse(raw.createdAt))?raw.createdAt:now,updatedAt:now};
+ if(m.poster&&/wikimedia[.]org/.test(new URL(m.poster).hostname)&&(!m.imageCredit||!m.imageSourceUrl||!m.imageLicenseUrl))m.poster='';
+ if(m.kind==='movie'&&m.status==='watching')m.status='unwatched';
+ if(m.started&&m.finished&&m.started>m.finished)throw Error('La date de fin doit suivre la date de début.');return m;
+}
+export function duplicateMedia(items,m){return items.find(x=>x.id!==m.id&&x.kind===m.kind&&(m.catalogId&&m.source===x.source&&m.catalogId===x.catalogId||norm(m.title)===norm(x.title)&&m.year===x.year))}
+export function filterMedia(items,{kind,query='',status='',sort='recent',genre=''}={}){const q=norm(query),c=new Intl.Collator('fr',{numeric:true,sensitivity:'base'});return items.filter(m=>m.kind===kind&&(!status||m.status===status)&&(!genre||m.genres.includes(genre))&&(!q||norm([m.title,...m.creators,...m.genres,m.year].join(' ')).includes(q))).sort((a,b)=>(sort==='title'?c.compare(a.title,b.title):sort==='rating'?b.rating-a.rating:sort==='year'?c.compare(b.year,a.year):b.createdAt.localeCompare(a.createdAt))||c.compare(a.title,b.title))}
+export function parseLibrary(text,parseBooks){const data=JSON.parse(text);if(data?.format!=='lisiere'||![1,2].includes(data.version)||!Array.isArray(data.books)||data.version===2&&!Array.isArray(data.media))throw Error('Choisissez un export Lisière version 1 ou 2.');const books=parseBooks(JSON.stringify({...data,version:1}));const raw=data.version===2?data.media:[];if(raw.length>2000||raw.length+books.length>2000)throw Error('Import limité à 2 000 fiches au total.');return {books,media:raw.map(normalizeMedia)};}
