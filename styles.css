@@ -5,3 +5,9 @@
 @media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#20231f;--paper:#272c26;--ink:#f1eee6;--muted:#bcb8ad;--line:#4e554c;--accent:#aed1b4;--soft:#303d32}.primary,.shelves .active,.tabs .active{color:#17251b}.brand-icon{background:#aed1b4;color:#17251b}.toast{background:#f1eee6;color:#20231f}.notice.error{background:#4b2723;color:#ffb9aa}}
 
 .detail-cover .cover-fallback{font-size:16px;padding:8px}.detail-cover .cover-fallback small{font-size:14px;margin-top:12px}.book-card p,.tag,.toolbar label,.section-heading p,.shelves span{font-size:14px}
+
+/* Profil Quentin : palette indépendante, appliquée après authentification. */
+:root[data-palette="slate"]{--bg:#f3f5f8;--paper:#fcfdff;--ink:#222f40;--muted:#5a687b;--line:#d2dbe6;--accent:#294d73;--soft:#e4ebf4;--accent-ink:#ffffff}
+@media(prefers-color-scheme:dark){:root[data-palette="slate"]{--bg:#171f2b;--paper:#202c3b;--ink:#edf2f8;--muted:#b3c1d2;--line:#46566b;--accent:#a5c8ec;--soft:#2b3d53;--accent-ink:#14283f}}
+:root[data-palette="slate"] .primary,:root[data-palette="slate"] .shelves .active,:root[data-palette="slate"] .tabs .active,:root[data-palette="slate"] .brand-icon{background:var(--accent);color:var(--accent-ink)}
+:root[data-palette="slate"] .toast{background:var(--ink);color:var(--paper)}
