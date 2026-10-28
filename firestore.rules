@@ -73,7 +73,7 @@ service cloud.firestore {
     && dateText(d.started) && dateText(d.finished) && (d.started == '' || d.finished == '' || d.started <= d.finished)
     && d.source in ['Apple Movies','TVmaze','Wikipédia','Manuel'] && short(d.catalogId,100)
     && short(d.imageCredit,500) && short(d.imageSourceUrl,2000) && short(d.imageLicenseUrl,2000)
-    && (d.imageSourceUrl == '' || d.imageSourceUrl.matches('^https://(commons[.]wikimedia[.]org|fr[.]wikipedia[.]org|en[.]wikipedia[.]org)/.*$'))
+    && (d.imageSourceUrl == '' || d.imageSourceUrl.matches('^https://(commons[.]wikimedia[.]org|fr[.]wikipedia[.]org|en[.]wikipedia[.]org|www[.]tvmaze[.]com|itunes[.]apple[.]com|tv[.]apple[.]com)/.*$'))
     && (d.imageLicenseUrl == '' || d.imageLicenseUrl.matches('^https://creativecommons[.]org/.*$'))
     && (!d.poster.matches('^https://(upload|thumb)[.]wikimedia[.]org/.*$') || (d.imageCredit.size() > 0 && d.imageSourceUrl.size() > 0 && d.imageLicenseUrl.size() > 0))
     && short(d.sourceUrl,2000) && (d.sourceUrl == ''
