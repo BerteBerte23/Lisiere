@@ -1,3 +1,4 @@
+import {searchMedia} from './media-catalog.js';
 import {createMediaUI} from './media.js';
 import {parseLibrary,duplicateMedia} from './media-model.js';
 import {
@@ -233,7 +234,7 @@ function settings() {
   const configured = store.configured();
   open(
     "Votre espace personnel",
-    `<p class="hint">${state.mode === "cloud" ? "Votre bibliothèque est synchronisée entre vos appareils connectés au même compte. La connexion reste ouverte sur cet appareil personnel." : "Deux comptes privés, deux bibliothèques indépendantes. Connectez-vous avec votre propre compte. Les comptes se créent dans la console Firebase, pas sur cette page."}</p>${state.mode === "cloud" ? `<div class="notice">${state.profile?.gender === "masculin" ? "Connecté" : "Connectée"} : ${esc(state.email)} · ${esc(state.profile?.label || "Mon profil")}</div><div class="actions"><button id="logout">Me déconnecter</button></div>` : configured ? `<form id="loginForm" class="form-grid"><label class="wide">Adresse e-mail<input name="email" type="email" autocomplete="username" required maxlength="254"></label><label class="wide">Mot de passe<input name="password" type="password" autocomplete="current-password" required></label><p class="hint wide">La connexion reste ouverte sur cet appareil personnel. Utilisez « Me déconnecter » sur un appareil partagé.</p><div class="wide actions"><button class="primary" type="submit">Me connecter</button><button id="reset" type="button">Mot de passe oublié</button></div></form>` : `<div class="notice">La synchronisation privée n’est pas encore configurée. Renseignez <b>config.js</b>, créez les deux comptes autorisés et publiez les règles Firestore. Toutes les étapes sont dans le guide fourni.</div>`}${state.mode !== "cloud" && state.mode !== "local" ? '<div class="actions"><button id="localMode">Essayer sur cet appareil uniquement</button></div><p class="hint">Mode local partagé par les personnes utilisant ce navigateur, non chiffré, sans authentification et sans synchronisation. Pour vos deux bibliothèques privées, utilisez chacun votre compte connecté. Sur iPhone, Safari et l’application installée peuvent avoir des stockages distincts. Les livres locaux ne sont jamais envoyés automatiquement vers le compte.</p>' : ""}${state.mode !== "none" ? `<h3>Illustrer ma bibliothèque</h3><p class="hint">Choisissez une couverture pour chaque livre qui n’en a pas. Le titre et l’auteur de votre recherche seront envoyés aux catalogues Open Library, Google Books et Apple Books. Certains titres disposent aussi d’une suggestion issue du site officiel de l’autrice. Vos notes et votre état de lecture ne sont pas transmis.</p><div class="actions"><button id="completeCovers">Compléter les couvertures manquantes</button></div><h3>Sauvegarder ma bibliothèque</h3><p class="hint">L’export contient vos notes personnelles. Conservez-le dans un endroit privé. L’import ajoute les fiches manquantes sans remplacer les fiches existantes. Sur le compte de Quentin, l’export version 2 inclut aussi films et séries ; les exports livres version 1 restent acceptés. Un import appartient toujours au compte connecté.</p><div class="actions"><button id="export">Exporter en JSON</button><button id="import">Importer un export</button></div><input class="hidden" id="importFile" type="file" accept=".json,application/json">` : ""}${state.mode === "local" ? '<div class="actions"><button id="exitLocal">Quitter le mode local</button></div>' : ""}<div class="install"><h3>Installer sur iPhone</h3><p class="hint">Ouvrez l’adresse HTTPS dans Safari → Partager → Sur l’écran d’accueil. Autorisez la caméra seulement au moment du scan. Sur Mac, utilisez la même adresse dans Safari.</p><p class="hint">Les photos sont traitées dans votre navigateur et ne sont pas enregistrées. La reconnaissance télécharge ses modèles linguistiques. Les recherches de livres sollicitent Google Books, Open Library ou Apple Books. Pour Quentin : films via Apple puis Wikipédia/Wikimedia en secours et séries via TVmaze (données CC BY-SA 4.0, lien sur chaque fiche). Ces catalogues reçoivent le titre recherché, pas les notes ni le suivi. Aucune connexion aux plateformes de streaming. Le fonctionnement complet nécessite Internet.</p></div>`,
+    `<p class="hint">${state.mode === "cloud" ? "Votre bibliothèque est synchronisée entre vos appareils connectés au même compte. La connexion reste ouverte sur cet appareil personnel." : "Deux comptes privés, deux bibliothèques indépendantes. Connectez-vous avec votre propre compte. Les comptes se créent dans la console Firebase, pas sur cette page."}</p>${state.mode === "cloud" ? `<div class="notice">${state.profile?.gender === "masculin" ? "Connecté" : "Connectée"} : ${esc(state.email)} · ${esc(state.profile?.label || "Mon profil")}</div><div class="actions"><button id="logout">Me déconnecter</button></div>` : configured ? `<form id="loginForm" class="form-grid"><label class="wide">Adresse e-mail<input name="email" type="email" autocomplete="username" required maxlength="254"></label><label class="wide">Mot de passe<input name="password" type="password" autocomplete="current-password" required></label><p class="hint wide">La connexion reste ouverte sur cet appareil personnel. Utilisez « Me déconnecter » sur un appareil partagé.</p><div class="wide actions"><button class="primary" type="submit">Me connecter</button><button id="reset" type="button">Mot de passe oublié</button></div></form>` : `<div class="notice">La synchronisation privée n’est pas encore configurée. Renseignez <b>config.js</b>, créez les deux comptes autorisés et publiez les règles Firestore. Toutes les étapes sont dans le guide fourni.</div>`}${state.mode !== "cloud" && state.mode !== "local" ? '<div class="actions"><button id="localMode">Essayer sur cet appareil uniquement</button></div><p class="hint">Mode local partagé par les personnes utilisant ce navigateur, non chiffré, sans authentification et sans synchronisation. Pour vos deux bibliothèques privées, utilisez chacun votre compte connecté. Sur iPhone, Safari et l’application installée peuvent avoir des stockages distincts. Les livres locaux ne sont jamais envoyés automatiquement vers le compte.</p>' : ""}${state.mode !== "none" ? `<h3>Illustrer ma bibliothèque</h3><p class="hint">Un seul parcours pour les images manquantes, avec un filtre par type et une validation de chaque image. Les images déjà présentes sont conservées. Les titres recherchés sont envoyés aux catalogues de livres, Apple, Wikipédia ou TVmaze selon le type ; jamais vos notes ni votre suivi. Les catalogues peuvent ne proposer aucune image adaptée.</p><div class="actions"><button id="completeCovers">Compléter les images manquantes</button></div><h3>Sauvegarder ma bibliothèque</h3><p class="hint">L’export contient vos notes personnelles. Conservez-le dans un endroit privé. L’import ajoute les fiches manquantes sans remplacer les fiches existantes. Sur le compte de Quentin, l’export version 2 inclut aussi films et séries ; les exports livres version 1 restent acceptés. Un import appartient toujours au compte connecté.</p><div class="actions"><button id="export">Exporter en JSON</button><button id="import">Importer un export</button></div><input class="hidden" id="importFile" type="file" accept=".json,application/json">` : ""}${state.mode === "local" ? '<div class="actions"><button id="exitLocal">Quitter le mode local</button></div>' : ""}<div class="install"><h3>Installer sur iPhone</h3><p class="hint">Ouvrez l’adresse HTTPS dans Safari → Partager → Sur l’écran d’accueil. Autorisez la caméra seulement au moment du scan. Sur Mac, utilisez la même adresse dans Safari.</p><p class="hint">Les photos sont traitées dans votre navigateur et ne sont pas enregistrées. La reconnaissance télécharge ses modèles linguistiques. Les recherches de livres sollicitent Google Books, Open Library ou Apple Books. Pour Quentin : films via Apple puis Wikipédia/Wikimedia en secours et séries via TVmaze (données CC BY-SA 4.0, lien sur chaque fiche). Ces catalogues reçoivent le titre recherché, pas les notes ni le suivi. Aucune connexion aux plateformes de streaming. Le fonctionnement complet nécessite Internet.</p></div>`,
   );
   if ($("#loginForm")) {
     $("#loginForm").onsubmit = (e) => {
@@ -310,135 +311,78 @@ function settings() {
     };
   }
 }
-// Parcours guidé : une validation par livre, pas d’écriture de masse automatique.
-function coversQueue(
-  ids = state.books.filter((b) => !b.cover).map((b) => b.id),
-  position = 0,
-) {
-  if (state.mode === "none") {
-    settings();
+// Parcours commun : validation par fiche, aucune recherche globale automatique.
+function coversQueue(filter = "all", entries = null, position = 0) {
+  if (state.mode === "none") return settings();
+  const mediaAllowed = state.mode === "cloud" && state.profile?.media === true;
+  if (!mediaAllowed) filter = "book";
+  const missing = () => [
+    ...state.books.filter(b => !b.cover).map(b => ({kind:"book",id:b.id})),
+    ...(mediaAllowed ? (state.media || []).filter(m => !m.poster).map(m => ({kind:m.kind,id:m.id})) : [])
+  ];
+  const currentItem = e => e.kind === "book" ? state.books.find(b=>b.id===e.id&&!b.cover) : (state.media||[]).find(m=>m.id===e.id&&m.kind===e.kind&&!m.poster);
+  entries ??= missing().filter(e => filter === "all" || e.kind === filter);
+  while(position < entries.length && !currentItem(entries[position])) position++;
+  const labels = {all:"Tout",book:"Livres",movie:"Films",series:"Séries"};
+  const counts = missing();
+  const filters = mediaAllowed ? `<label>Filtrer les images manquantes<select id="imageTypeFilter">${Object.entries(labels).map(([key,label])=>`<option value="${key}" ${key===filter?"selected":""}>${label} · ${counts.filter(e=>key==="all"||e.kind===key).length}</option>`).join("")}</select></label>` : '<p class="hint">Images manquantes · Livres</p>';
+  const back = '<div class="actions"><button id="cancelCovers">Retour aux réglages</button></div>';
+  if(position >= entries.length) {
+    open("Compléter les images manquantes",`${filters}<p>${entries.length ? "Parcours terminé. Les fiches passées ou sans résultat restent sans image. Changez de filtre ou relancez le parcours pour réessayer." : "Aucune image manquante dans ce filtre. Les images déjà présentes ne sont pas remplacées."}</p><button id="restartImages">Relancer ce filtre</button>${back}`);
+    $("#restartImages").onclick=()=>coversQueue(filter);
+    if($("#imageTypeFilter")) $("#imageTypeFilter").onchange=e=>coversQueue(e.target.value);
+    $("#cancelCovers").onclick=settings;
     return;
   }
-  while (
-    position < ids.length &&
-    !state.books.some((b) => b.id === ids[position] && !b.cover)
-  )
-    position++;
-  if (position >= ids.length) {
-    open(
-      "Couvertures manquantes",
-      `<p>${ids.length ? "Parcours terminé. Les livres ignorés ou sans résultat restent sans couverture. Vous pourrez relancer la recherche plus tard." : "Tous vos livres ont déjà une adresse de couverture."}</p><button id="coversDone">Retour aux réglages</button>`,
-    );
-    $("#coversDone").onclick = settings;
-    return;
-  }
-  const book = state.books.find((b) => b.id === ids[position]);
-  const initial = book.isbn || [book.title, ...book.authors].join(" ");
-  const token = open(
-    "Compléter les couvertures",
-    `<p class="hint">Livre ${position + 1} sur ${ids.length} · choisissez l’image avant de l’enregistrer.</p><h3>${esc(book.title)}</h3><p>${esc(book.authors.join(" · "))}</p><p class="hint">Vérifiez le titre, l’auteur, la langue et le tome. Une couverture peut représenter une autre édition : l’ISBN de votre fiche ne sera pas modifié.</p><form id="coverSearchForm" class="search-form"><label>Recherche<input id="coverQuery" maxlength="200" value="${esc(initial.slice(0, 200))}" required></label><button type="submit">Rechercher</button></form><p id="coverSearchStatus" role="status"></p><div id="coverResults" class="results"></div><div class="actions"><button id="skipCover">Passer ce livre</button><button id="cancelCovers">Retour aux réglages</button></div>`,
-  );
-  const next = () => coversQueue(ids, position + 1);
-  $("#skipCover").onclick = next;
-  $("#cancelCovers").onclick = settings;
-  let request = 0,
-    saving = false;
+  const entry=entries[position], book=currentItem(entry), isBook=entry.kind==="book";
+  const initial=isBook ? book.isbn || [book.title,...book.authors].join(" ") : book.title;
+  const token=open("Compléter les images manquantes",`${filters}<p class="hint">${labels[entry.kind]} · fiche ${position+1} sur ${entries.length} · choisissez l’image avant de l’enregistrer.</p><h3>${esc(book.title)}</h3><p>${esc(isBook?book.authors.join(" · "):book.year)}</p><p class="hint">${isBook?"Vérifiez le titre, l’auteur, la langue et le tome. Une couverture peut représenter une autre édition : l’ISBN ne sera pas modifié.":"Vérifiez le titre, l’année et le type. Une image de catalogue peut être une illustration plutôt qu’une affiche française. Les notes, statuts, saisons et épisodes sont conservés."}</p><form id="coverSearchForm" class="search-form"><label>Recherche<input id="coverQuery" maxlength="200" value="${esc(initial.slice(0,200))}" required></label><button type="submit">Rechercher</button></form><p id="coverSearchStatus" role="status"></p><div id="coverResults" class="results"></div><div class="actions"><button id="skipCover">Passer cette fiche</button></div>${back}`);
+  const next=()=>coversQueue(filter,entries,position+1);
+  $("#skipCover").onclick=next;
+  $("#cancelCovers").onclick=settings;
+  if($("#imageTypeFilter")) $("#imageTypeFilter").onchange=e=>coversQueue(e.target.value);
+  let request=0,saving=false;
   async function search() {
-    if (saving) return;
-    const current = ++request;
-    const status = $("#coverSearchStatus"),
-      list = $("#coverResults"),
-      button = $("#coverSearchForm button");
-    button.disabled = true;
-    status.textContent = "Recherche des couvertures…";
-    list.replaceChildren();
+    if(saving)return;
+    const current=++request,status=$("#coverSearchStatus"),list=$("#coverResults"),button=$("#coverSearchForm button");
+    button.disabled=true;status.textContent="Recherche des images…";list.replaceChildren();
     try {
-      const found = await searchCovers(book, $("#coverQuery").value);
-      if (token !== generation || current !== request) return;
-      status.textContent = found.items.length
-        ? "Chargement des images : sélectionnez la bonne couverture."
-        : "Aucune couverture trouvée. Essayez un titre plus court, le titre et l’auteur, ou l’ISBN au dos du livre.";
-      if (found.warnings.length)
-        status.textContent += " " + found.warnings.join(" ; ") + ".";
-      let remaining = found.items.length,
-        loaded = 0;
-      for (const item of found.items) {
-        const choice = document.createElement("button");
-        choice.type = "button";
-        choice.className = "result";
-        choice.disabled = true;
-        choice.innerHTML = `<img alt="${esc("Couverture proposée : " + item.title)}" referrerpolicy="no-referrer"><span><strong>${esc(item.title)}</strong><small>${esc(item.authors.join(" · "))}<br>${esc([item.publisher, item.published, item.language, item.source].filter(Boolean).join(" · "))}</small><small data-cover-message>Chargement de l’image…</small></span>`;
-        const image = choice.querySelector("img"),
-          message = choice.querySelector("[data-cover-message]");
-        let settled = false;
-        const done = (ok) => {
-          if (settled) return;
-          settled = true;
-          remaining--;
-          if (ok) {
-            loaded++;
-            choice.disabled = saving;
-            message.textContent = "Choisir cette couverture";
-          } else {
-            choice.disabled = true;
-            message.textContent = "Image indisponible";
-            image.remove();
-          }
-          if (
-            !remaining &&
-            !loaded &&
-            token === generation &&
-            current === request
-          )
-            status.textContent =
-              "Les images proposées ne sont pas disponibles. Modifiez la recherche ou passez ce livre.";
-        };
-        image.onload = () =>
-          done(image.naturalWidth > 20 && image.naturalHeight > 20);
-        image.onerror = () => done(false);
-        choice.onclick = async () => {
-          if (saving || token !== generation || current !== request) return;
-          saving = true;
-          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
-          button.disabled = true;
-          $("#skipCover").disabled = true;
-          status.textContent = "Enregistrement de la couverture…";
-          try {
-            await store.updateCover(book.id, item.cover);
-            if (token === generation) {
-              toast("Couverture ajoutée. Le reste de la fiche est conservé.");
-              next();
-            }
-          } catch (err) {
-            if (token === generation) {
-              saving = false;
-              status.textContent = errorText(err);
-              button.disabled = false;
-              $("#skipCover").disabled = false;
-              list.querySelectorAll("button").forEach((b) => {
-                b.disabled =
-                  !b.querySelector("img")?.complete ||
-                  !(b.querySelector("img")?.naturalWidth > 20);
-              });
-            }
-          }
-        };
-        list.append(choice);
-        image.src = item.cover;
+      const query=$("#coverQuery").value;
+      let found;
+      if(isBook) found=await searchCovers(book,query);
+      else {
+        const results=await searchMedia(entry.kind,query);
+        found={warnings:[],items:results.filter(m=>m.poster).map(m=>({ ...m,cover:m.poster,authors:m.creators,published:m.year,
+          imageCredit:m.imageCredit || (m.source==="TVmaze"?"TVmaze — CC BY-SA 4.0":m.source),
+          imageSourceUrl:m.imageSourceUrl || m.sourceUrl,
+          imageLicenseUrl:m.imageLicenseUrl || (m.source==="TVmaze"?"https://creativecommons.org/licenses/by-sa/4.0/":"") }))};
       }
-    } catch (err) {
-      if (token === generation && current === request)
-        status.textContent = errorText(err);
-    } finally {
-      if (token === generation && current === request && !saving)
-        button.disabled = false;
-    }
+      if(token!==generation||current!==request)return;
+      status.textContent=found.items.length?"Chargement des images : sélectionnez celle qui correspond à votre fiche.":"Aucune image disponible. Modifiez le titre recherché ou passez cette fiche. Les catalogues ne sont pas exhaustifs.";
+      if(found.warnings.length)status.textContent+=" "+found.warnings.join(" ; ")+".";
+      let remaining=found.items.length,loaded=0;
+      for(const item of found.items) {
+        const choice=document.createElement("button");choice.type="button";choice.className="result";choice.disabled=true;
+        choice.innerHTML=`<img alt="${esc("Image proposée : "+item.title)}" referrerpolicy="no-referrer"><span><strong>${esc(item.title)}</strong><small>${esc((item.authors||[]).join(" · "))}<br>${esc([item.publisher,item.published,item.language,item.source].filter(Boolean).join(" · "))}</small><small>${esc(item.imageCredit||"")}</small><small data-cover-message>Chargement de l’image…</small></span>`;
+        const image=choice.querySelector("img"),message=choice.querySelector("[data-cover-message]");let settled=false;
+        const done=ok=>{if(settled)return;settled=true;remaining--;if(ok){loaded++;choice.disabled=saving;message.textContent="Choisir cette image"}else{choice.disabled=true;message.textContent="Image indisponible";image.remove()}if(!remaining&&!loaded&&token===generation&&current===request)status.textContent="Les images proposées ne sont pas disponibles. Modifiez la recherche ou passez cette fiche."};
+        image.onload=()=>done(image.naturalWidth>20&&image.naturalHeight>20);image.onerror=()=>done(false);
+        choice.onclick=async()=>{
+          if(saving||token!==generation||current!==request)return;
+          saving=true;list.querySelectorAll("button").forEach(b=>b.disabled=true);button.disabled=true;$("#skipCover").disabled=true;
+          if($("#imageTypeFilter"))$("#imageTypeFilter").disabled=true;
+          status.textContent="Enregistrement de l’image…";
+          try {
+            if(isBook)await store.updateCover(book.id,item.cover);else await store.updatePoster(book.id,item);
+            if(token===generation){toast("Image ajoutée. Le reste de la fiche est conservé.");next()}
+          }catch(err){if(token===generation){saving=false;status.textContent=errorText(err);button.disabled=false;$("#skipCover").disabled=false;if($("#imageTypeFilter"))$("#imageTypeFilter").disabled=false;list.querySelectorAll("button").forEach(b=>{const img=b.querySelector("img");b.disabled=!(img?.complete&&img.naturalWidth>20&&img.naturalHeight>20)})}}
+        };
+        list.append(choice);image.src=item.cover;
+      }
+    }catch(err){if(token===generation&&current===request)status.textContent=errorText(err)}
+    finally{if(token===generation&&current===request&&!saving)button.disabled=false}
   }
-  $("#coverSearchForm").onsubmit = (e) => {
-    e.preventDefault();
-    search();
-  };
-  search();
+  $("#coverSearchForm").onsubmit=e=>{e.preventDefault();search()};search();
 }
 function exportBooks() {
   const blob = new Blob(

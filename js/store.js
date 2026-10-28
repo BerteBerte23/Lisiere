@@ -54,3 +54,12 @@ function mediaContext(){const c=context();if(!canMedia())throw Error('Films et s
 export async function saveMedia(raw){const c=mediaContext(),m=normalizeMedia(raw);await fs.setDoc(fs.doc(db,'users',c.uid,'media',m.id),m);checkContext(c);return m}
 export async function removeMedia(id){const c=mediaContext();if(!/^[a-zA-Z0-9_-]{1,100}$/.test(id))throw Error('Identifiant invalide.');await fs.deleteDoc(fs.doc(db,'users',c.uid,'media',id));checkContext(c)}
 export async function importLibrary(bookItems,mediaItems){const c=mediaItems.length?mediaContext():null,currentSession=session;let added=0,skipped=0;await importBooks(bookItems);for(const raw of mediaItems){if(session!==currentSession)throw Error('Session modifiée : import interrompu.');checkContext(c);const m=normalizeMedia(raw),ref=fs.doc(db,'users',c.uid,'media',m.id);const created=await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);checkContext(c);if(snap.exists())return false;tx.set(ref,m);return true});checkContext(c);if(created)added++;else skipped++;}return{added,skipped}}
+
+// Transaction ciblée : images et attribution seulement, jamais le suivi personnel.
+export async function updatePoster(id,candidate){
+ const c=mediaContext();if(!/^[a-zA-Z0-9_-]{1,100}$/.test(id))throw Error('Identifiant invalide.');
+ const image=normalizeMedia({...candidate,id});if(!image.poster)throw Error('Image invalide ou attribution manquante.');
+ const patch={poster:image.poster,imageCredit:image.imageCredit,imageSourceUrl:image.imageSourceUrl,imageLicenseUrl:image.imageLicenseUrl,updatedAt:new Date().toISOString()};
+ const ref=fs.doc(db,'users',c.uid,'media',id);
+ await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);checkContext(c);if(!snap.exists())throw Error('Cette fiche n’existe plus.');const current=snap.data();if(current.kind!==image.kind)throw Error('Le type de fiche ne correspond pas.');if(current.poster)throw Error('Une image a déjà été ajoutée. Elle a été conservée.');tx.update(ref,patch)});checkContext(c);
+}
