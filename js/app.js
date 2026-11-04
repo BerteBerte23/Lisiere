@@ -1,6 +1,7 @@
 import {searchMedia} from './media-catalog.js';
 import {createMediaUI} from './media.js';
 import {parseLibrary,duplicateMedia} from './media-model.js';
+import {createCapture} from './capture.js';
 import {
   GENRES,
   STATUSES,
@@ -107,8 +108,11 @@ function applyProfile() {
 const colourPreference = window.matchMedia("(prefers-color-scheme: dark)");
 colourPreference.addEventListener("change", applyProfile);
 const mediaUI=createMediaUI({open,close,toast,busy,error:errorText,images:bindImageErrors,generation:()=>generation,render:()=>render(),addBook:add});
+// Capture depuis l’extension Chrome : ouvre les formulaires existants, ne sauvegarde jamais seule.
+const capture=createCapture({state:()=>state,canMedia:()=>store.canMedia(),openBook:b=>editor(b),showBook:id=>detail(id),openMedia:m=>mediaUI.openCapture(m),toast,confirm:t=>window.confirm(t)});
 function render() {
   applyProfile();
+  capture.update();
   const mediaViewing=mediaUI.update(state);
   const total = state.books.length;
   if(!mediaViewing)$("#collectionCount").textContent =

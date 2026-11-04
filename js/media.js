@@ -54,5 +54,5 @@ export function createMediaUI(h){
  $('#mediaToggle').onclick=e=>h.busy(e.target,async()=>{await store.saveMedia({...m,status:m.status==='watched'?'unwatched':'watched'});if(valid(token)){h.close();h.toast('Suivi mis à jour.')}});
  $('#mediaDelete').onclick=e=>h.busy(e.target,async()=>{if(!confirm('Supprimer définitivement « '+m.title+' » ?'))return;await store.removeMedia(id);if(valid(token)){h.close();h.toast('Fiche supprimée.')}});h.images();
  }
- return{update,reset};
+ return{update,reset,openCapture:raw=>editor(raw)};
 }
