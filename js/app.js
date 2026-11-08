@@ -62,10 +62,39 @@ function stopResources() {
     worker = null;
   }
 }
+const EYE =
+  '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF =
+  '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10.5 10.5 0 0 1 12 19C5.6 19 2 12 2 12a18.5 18.5 0 0 1 4.1-5.1M9.9 5.2A9.6 9.6 0 0 1 12 5c6.4 0 10 7 10 7a18.6 18.6 0 0 1-2.2 3.2M14.1 14.1a3 3 0 1 1-4.2-4.2"/><path d="M2 2l20 20"/></svg>';
+// Ajoute un bouton « afficher / masquer » à chaque champ de mot de passe d'une fenêtre.
+function addPasswordToggles(root) {
+  root.querySelectorAll('input[type="password"]').forEach((input) => {
+    const wrap = document.createElement("span");
+    wrap.className = "pw-field";
+    input.replaceWith(wrap);
+    wrap.append(input);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pw-toggle";
+    const set = (show) => {
+      input.type = show ? "text" : "password";
+      btn.setAttribute("aria-pressed", String(show));
+      btn.setAttribute("aria-label", show ? "Masquer le mot de passe" : "Afficher le mot de passe");
+      btn.innerHTML = show ? EYE_OFF : EYE;
+    };
+    btn.onclick = () => {
+      set(input.type === "password");
+      input.focus({ preventScroll: true });
+    };
+    set(false);
+    wrap.append(btn);
+  });
+}
 function open(title, html) {
   stopResources();
   $("#modalTitle").textContent = title;
   body.innerHTML = html;
+  addPasswordToggles(body);
   if (!modal.open) modal.showModal();
   bindImageErrors();
   requestAnimationFrame(() => {
