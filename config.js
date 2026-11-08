@@ -14,7 +14,7 @@ export const CONFIG = Object.freeze({
   "googleBooksApiKey": "",
   // Clé TMDB gratuite (https://www.themoviedb.org/settings/api, « Clé d'API » v3) pour les films et séries de l'onglet « Pour vous ».
   // Laisser vide pour désactiver ces suggestions. Cette clé est visible publiquement, comme le reste de ce fichier.
-  "tmdbApiKey": "",
+  "tmdbApiKey": "6aae1d6238b513e0603a08fd4c9b5ba0",
   "region": "FR",
   "profiles": [
     {
