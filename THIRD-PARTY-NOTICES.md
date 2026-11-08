@@ -15,3 +15,9 @@ Ces composants sont identifiés par version ; leurs licences originales sont joi
 - **Google Books API**, facultative : métadonnées et couvertures. https://developers.google.com/books/docs/v1/using
 
 Les notices de source sont conservées sur les fiches de livres. Une description de catalogue n’est pas nécessairement la quatrième de couverture exacte. Les couvertures et textes restent soumis aux droits de leurs ayants droit ; aucune licence de réutilisation générale n’est présumée et aucun catalogue entier n’est aspiré. Le ZIP n’inclut aucun livre, couverture ou texte éditorial d’un tiers.
+
+## Films, séries et recommandations (onglet « Pour vous »)
+
+- **TMDB** : suggestions de films et de séries, affiches. Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB. https://www.themoviedb.org/ — clé personnelle gratuite, renseignée dans `config.js`.
+- **TVmaze** : suivi des épisodes des séries (données sous licence CC BY-SA 4.0). https://www.tvmaze.com/api
+- **IMDb** : aucune API publique gratuite ; Lisière propose seulement un lien de recherche vers imdb.com, sans échange de données.

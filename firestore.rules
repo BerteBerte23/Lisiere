@@ -1,10 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
-  // Deux comptes autorisés ; chacun accède uniquement au chemin de son UID.
+  // Comptes autorisés ; chacun accède uniquement au chemin de son UID.
+  // Remplacer REMPLACER_UID_FRERE et REMPLACER_UID_COMPAGNE (une seule fois chacun, juste ci-dessous) par les UID Firebase des deux nouveaux comptes.
+  // Tant qu'ils ne sont pas remplacés, ces deux entrées ne correspondent à aucun compte réel.
+  function frere() { return 'REMPLACER_UID_FRERE'; }
+  function compagne() { return 'REMPLACER_UID_COMPAGNE'; }
   function owner(uid) {
    return request.auth != null && request.auth.uid == uid
-    && request.auth.uid in ['Ip5pI839d4WwxI818ujNyH4a2xl1', 'zv1huPM37lVmr9tbpsCCzl5Bfj72'];
+    && request.auth.uid in ['Ip5pI839d4WwxI818ujNyH4a2xl1', 'zv1huPM37lVmr9tbpsCCzl5Bfj72', frere(), compagne()];
   }
   function short(s,n) { return s is string && s.size() <= n; }
   function dateText(s) { return short(s,10) && (s == '' || s.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')); }
@@ -52,9 +56,9 @@ service cloud.firestore {
    allow update: if owner(uid) && valid(request.resource.data,id)
     && request.resource.data.createdAt == resource.data.createdAt;
   }
-  // Autorisation serveur distincte : ni la lectrice, ni un tiers, ni l’anonyme.
+  // Films et séries : réservés aux comptes habilités (pas la lectrice, ni un tiers, ni l’anonyme).
   function mediaOwner(uid) {
-   return owner(uid) && request.auth.uid == 'zv1huPM37lVmr9tbpsCCzl5Bfj72';
+   return owner(uid) && request.auth.uid in ['zv1huPM37lVmr9tbpsCCzl5Bfj72', frere(), compagne()];
   }
   function validMedia(d,id) {
    return d.keys().hasAll(['id','kind','title','creators','genres','year','description','poster','status','season','episode','rating','notes','started','finished','source','imageCredit','imageSourceUrl','imageLicenseUrl','catalogId','sourceUrl','createdAt','updatedAt'])
@@ -64,14 +68,14 @@ service cloud.firestore {
     && textList(d.creators,120,10) && textList(d.genres,60,12)
     && short(d.year,4) && (d.year == '' || d.year.matches('^[0-9]{1,4}$'))
     && short(d.description,12000) && short(d.notes,10000)
-    && short(d.poster,2000) && (d.poster == '' || d.poster.matches('^https://(is[1-5]-ssl[.]mzstatic[.]com|static[.]tvmaze[.]com|upload[.]wikimedia[.]org|thumb[.]wikimedia[.]org)/.*$'))
+    && short(d.poster,2000) && (d.poster == '' || d.poster.matches('^https://(is[1-5]-ssl[.]mzstatic[.]com|static[.]tvmaze[.]com|upload[.]wikimedia[.]org|thumb[.]wikimedia[.]org|image[.]tmdb[.]org)/.*$'))
     && d.status in ['unwatched','watching','watched']
     && d.season is int && d.season >= 0 && d.season <= 10000
     && d.episode is int && d.episode >= 0 && d.episode <= 100000
     && (d.kind == 'series' || (d.season == 0 && d.episode == 0 && d.status != 'watching'))
     && d.rating is int && d.rating >= 0 && d.rating <= 5
     && dateText(d.started) && dateText(d.finished) && (d.started == '' || d.finished == '' || d.started <= d.finished)
-    && d.source in ['Apple Movies','TVmaze','Wikipédia','Manuel'] && short(d.catalogId,100)
+    && d.source in ['Apple Movies','TVmaze','Wikipédia','TMDB','Manuel'] && short(d.catalogId,100)
     && short(d.imageCredit,500) && short(d.imageSourceUrl,2000) && short(d.imageLicenseUrl,2000)
     && (d.imageSourceUrl == '' || d.imageSourceUrl.matches('^https://(commons[.]wikimedia[.]org|fr[.]wikipedia[.]org|en[.]wikipedia[.]org|www[.]tvmaze[.]com|itunes[.]apple[.]com|tv[.]apple[.]com)/.*$'))
     && (d.imageLicenseUrl == '' || d.imageLicenseUrl.matches('^https://creativecommons[.]org/.*$'))
@@ -79,6 +83,7 @@ service cloud.firestore {
     && short(d.sourceUrl,2000) && (d.sourceUrl == ''
      || (d.source == 'TVmaze' && d.sourceUrl.matches('^https://www[.]tvmaze[.]com/.*$'))
      || (d.source == 'Wikipédia' && d.sourceUrl.matches('^https://(fr|en)[.]wikipedia[.]org/.*$'))
+     || (d.source == 'TMDB' && d.sourceUrl.matches('^https://www[.]themoviedb[.]org/.*$'))
      || (d.source == 'Apple Movies' && d.sourceUrl.matches('^https://(itunes[.]apple[.]com|tv[.]apple[.]com)/.*$')))
     && short(d.createdAt,40) && short(d.updatedAt,40)
     && d.createdAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*$')
@@ -90,6 +95,21 @@ service cloud.firestore {
    allow update: if mediaOwner(uid) && validMedia(request.resource.data,id)
     && request.resource.data.createdAt == resource.data.createdAt
     && request.resource.data.kind == resource.data.kind;
+  }
+  // Préférences de recommandations et de notifications : un seul document par compte.
+  function genreList(v,allowed) { return v is list && v.size() <= 20 && v.hasOnly(allowed); }
+  function validPrefs(d) {
+   return d.keys().hasAll(['genresBook','genresMovie','genresSeries','useLibrary','notifyMovies','notifySeries','notifyFollowed','updatedAt'])
+    && d.keys().hasOnly(['genresBook','genresMovie','genresSeries','useLibrary','notifyMovies','notifySeries','notifyFollowed','updatedAt'])
+    && genreList(d.genresBook,['Roman','Policier / Thriller','Romance','New Romance','Fantasy','Science-fiction','Historique','Contemporain','Littérature générale','Biographie','Essai','BD / Manga','Jeunesse'])
+    && genreList(d.genresMovie,['Action','Aventure','Animation','Comédie','Crime','Documentaire','Drame','Familial','Fantastique','Histoire','Horreur','Musique','Mystère','Romance','Science-fiction','Thriller','Guerre','Western'])
+    && genreList(d.genresSeries,['Action & aventure','Animation','Comédie','Crime','Documentaire','Drame','Familial','Mystère','Science-fiction & fantastique','Guerre & politique','Western'])
+    && d.useLibrary is bool && d.notifyMovies is bool && d.notifySeries is bool && d.notifyFollowed is bool
+    && short(d.updatedAt,40) && d.updatedAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*$');
+  }
+  match /users/{uid}/prefs/{id} {
+   allow read, delete: if owner(uid) && id == 'main';
+   allow create, update: if owner(uid) && id == 'main' && validPrefs(request.resource.data);
   }
   match /{document=**} { allow read, write: if false; }
  }
