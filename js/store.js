@@ -40,6 +40,18 @@ export async function initCloud(){
 }
 export async function login(email,password){if(!auth)throw Error('Connexion Firebase indisponible. Vérifiez la configuration et le réseau.');try{await fa.signInWithEmailAndPassword(auth,email,password)}catch{throw Error('Connexion impossible. Vérifiez les identifiants et réessayez plus tard.')}}
 export async function resetPassword(email){if(!auth||!email)throw Error('Renseignez votre adresse e-mail.');try{await fa.sendPasswordResetEmail(auth,email)}catch{/* Message générique : pas d’énumération des comptes. */}}
+// Changement de mot de passe par la personne elle-même. Firebase exige une ressaisie récente du mot de passe actuel.
+export async function changePassword(current,next){
+ const user=auth?.currentUser;
+ if(mode!=='cloud'||!user||!user.email)throw Error('Connectez-vous pour changer votre mot de passe.');
+ if(typeof current!=='string'||!current)throw Error('Saisissez votre mot de passe actuel.');
+ if(typeof next!=='string'||next.length<8||next.length>128)throw Error('Le nouveau mot de passe doit contenir entre 8 et 128 caractères.');
+ if(next===current)throw Error('Le nouveau mot de passe doit être différent de l’actuel.');
+ try{await fa.reauthenticateWithCredential(user,fa.EmailAuthProvider.credential(user.email,current))}
+ catch(e){const c=e?.code||'';throw Error(c==='auth/network-request-failed'?'Réseau indisponible. Réessayez.':c==='auth/too-many-requests'?'Trop de tentatives. Patientez quelques minutes avant de réessayer.':'Mot de passe actuel incorrect.')}
+ try{await fa.updatePassword(user,next)}
+ catch(e){const c=e?.code||'';throw Error(c==='auth/weak-password'?'Mot de passe trop faible. Choisissez-en un plus long ou plus varié.':c==='auth/network-request-failed'?'Réseau indisponible. Réessayez.':'Changement impossible. Réessayez dans un instant.')}
+}
 export async function logout(){reset();emit();if(auth?.currentUser)await fa.signOut(auth)}
 export async function saveBook(raw){const b=normalizeBook(raw);if(mode==='local'){const next=books.filter(x=>x.id!==b.id).concat(b);try{localStorage.setItem(KEY,JSON.stringify(next))}catch{throw Error('Stockage local plein ou bloqué. Exportez votre bibliothèque.')}books=next;emit();return b}const c=context();await fs.setDoc(fs.doc(db,'users',c.uid,'books',b.id),b);checkContext(c);return b}
 export async function removeBook(id){if(!/^[a-zA-Z0-9_-]{1,100}$/.test(id))throw Error('Identifiant de livre invalide.');if(mode==='local'){const next=books.filter(b=>b.id!==id);localStorage.setItem(KEY,JSON.stringify(next));books=next;emit();return}const c=context();await fs.deleteDoc(fs.doc(db,'users',c.uid,'books',id));checkContext(c)}
