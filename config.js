@@ -19,7 +19,7 @@ export const CONFIG = Object.freeze({
   "profiles": [
     {
       "uid": "Ip5pI839d4WwxI818ujNyH4a2xl1",
-      "label": "Lectrice",
+      "label": "Tatiana",
       "gender": "feminin",
       "palette": "sage"
     },
@@ -32,16 +32,16 @@ export const CONFIG = Object.freeze({
     },
     {
       // Remplacer REMPLACER_UID_FRERE par l'UID du compte créé dans Firebase (Authentication > Users), et le prénom.
-      "uid": "REMPLACER_UID_FRERE",
-      "label": "Mon frère",
+      "uid": "EW9T2xfo2VNPR91iq4JUxlI7Uo73",
+      "label": "Jérem",
       "gender": "masculin",
       "palette": "ember",
       "media": true
     },
     {
       // Remplacer REMPLACER_UID_COMPAGNE par l'UID du compte créé dans Firebase, et le prénom.
-      "uid": "REMPLACER_UID_COMPAGNE",
-      "label": "Sa compagne",
+      "uid": "8wnhuCehSjaDJwT3lyv5cvHkah73",
+      "label": "Julia",
       "gender": "feminin",
       "palette": "plum",
       "media": true
