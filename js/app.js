@@ -2,6 +2,8 @@ import {searchMedia} from './media-catalog.js';
 import {createMediaUI} from './media.js';
 import {parseLibrary,duplicateMedia} from './media-model.js';
 import {createCapture} from './capture.js';
+import * as pwa from './pwa.js';
+import {createTutorial} from './tutorial.js';
 import {
   GENRES,
   STATUSES,
@@ -97,8 +99,11 @@ function cover(b, cls = "") {
   return `<div class="cover-wrap ${cls}"><div class="cover-fallback">${esc(b.title)}<small>${esc(b.authors.join(" · "))}</small></div>${url ? `<img data-cover src="${esc(url)}" alt="Couverture de ${esc(b.title)}" loading="lazy" referrerpolicy="no-referrer">` : ""}${b.status === "reading" ? '<span class="tag tag-progress">En cours</span>' : ""}</div>`;
 }
 function applyProfile() {
-  document.documentElement.dataset.palette =
-    state.profile?.palette === "slate" ? "slate" : "sage";
+  document.documentElement.dataset.palette = ["slate", "ember", "plum"].includes(
+    state.profile?.palette,
+  )
+    ? state.profile.palette
+    : "sage";
   const meta = $('meta[name="theme-color"]');
   if (meta)
     meta.content = getComputedStyle(document.documentElement)
@@ -107,12 +112,14 @@ function applyProfile() {
 }
 const colourPreference = window.matchMedia("(prefers-color-scheme: dark)");
 colourPreference.addEventListener("change", applyProfile);
-const mediaUI=createMediaUI({open,close,toast,busy,error:errorText,images:bindImageErrors,generation:()=>generation,render:()=>render(),addBook:add});
+const mediaUI=createMediaUI({open,close,toast,busy,error:errorText,images:bindImageErrors,generation:()=>generation,render:()=>render(),addBook:add,openBook:b=>editor(b)});
+const tutorial=createTutorial({open,close,state:()=>state,go:t=>{if(t==='prefs')mediaUI.openPrefs()}});
 // Capture depuis l’extension Chrome : ouvre les formulaires existants, ne sauvegarde jamais seule.
 const capture=createCapture({state:()=>state,canMedia:()=>store.canMedia(),openBook:b=>editor(b),showBook:id=>detail(id),openMedia:m=>mediaUI.openCapture(m),toast,confirm:t=>window.confirm(t)});
 function render() {
   applyProfile();
   capture.update();
+  tutorial.maybeStart();
   const mediaViewing=mediaUI.update(state);
   const total = state.books.length;
   if(!mediaViewing)$("#collectionCount").textContent =
@@ -128,7 +135,7 @@ function render() {
         ? `Bibliothèque privée · ${state.profile?.label || "Mon profil"} · ${state.email} · synchronisation en ligne`
         : state.mode === "local"
           ? "Mode local : uniquement sur cet appareil. Pas de compte privé ni de synchronisation. Pensez à exporter."
-          : "Connectez-vous pour retrouver vos livres sur iPhone et Mac.");
+          : "Connectez-vous pour retrouver votre bibliothèque sur tous vos appareils.");
   connection.append(msg);
   if (state.mode === "none") {
     const btn = document.createElement("button");
@@ -199,6 +206,7 @@ store.subscribe((s) => {
   state = s;
   if (changed) {
     mediaUI.reset();
+    tutorial.reset();
     if (modal.open) close();
     shelf = "all";
     $("#librarySearch").value = "";
@@ -238,7 +246,7 @@ function settings() {
   const configured = store.configured();
   open(
     "Votre espace personnel",
-    `<p class="hint">${state.mode === "cloud" ? "Votre bibliothèque est synchronisée entre vos appareils connectés au même compte. La connexion reste ouverte sur cet appareil personnel." : "Deux comptes privés, deux bibliothèques indépendantes. Connectez-vous avec votre propre compte. Les comptes se créent dans la console Firebase, pas sur cette page."}</p>${state.mode === "cloud" ? `<div class="notice">${state.profile?.gender === "masculin" ? "Connecté" : "Connectée"} : ${esc(state.email)} · ${esc(state.profile?.label || "Mon profil")}</div><div class="actions"><button id="logout">Me déconnecter</button></div>` : configured ? `<form id="loginForm" class="form-grid"><label class="wide">Adresse e-mail<input name="email" type="email" autocomplete="username" required maxlength="254"></label><label class="wide">Mot de passe<input name="password" type="password" autocomplete="current-password" required></label><p class="hint wide">La connexion reste ouverte sur cet appareil personnel. Utilisez « Me déconnecter » sur un appareil partagé.</p><div class="wide actions"><button class="primary" type="submit">Me connecter</button><button id="reset" type="button">Mot de passe oublié</button></div></form>` : `<div class="notice">La synchronisation privée n’est pas encore configurée. Renseignez <b>config.js</b>, créez les deux comptes autorisés et publiez les règles Firestore. Toutes les étapes sont dans le guide fourni.</div>`}${state.mode !== "cloud" && state.mode !== "local" ? '<div class="actions"><button id="localMode">Essayer sur cet appareil uniquement</button></div><p class="hint">Mode local partagé par les personnes utilisant ce navigateur, non chiffré, sans authentification et sans synchronisation. Pour vos deux bibliothèques privées, utilisez chacun votre compte connecté. Sur iPhone, Safari et l’application installée peuvent avoir des stockages distincts. Les livres locaux ne sont jamais envoyés automatiquement vers le compte.</p>' : ""}${state.mode !== "none" ? `<h3>Illustrer ma bibliothèque</h3><p class="hint">Un seul parcours pour les images manquantes, avec un filtre par type et une validation de chaque image. Les images déjà présentes sont conservées. Les titres recherchés sont envoyés aux catalogues de livres, Apple, Wikipédia ou TVmaze selon le type ; jamais vos notes ni votre suivi. Les catalogues peuvent ne proposer aucune image adaptée.</p><div class="actions"><button id="completeCovers">Compléter les images manquantes</button></div><h3>Sauvegarder ma bibliothèque</h3><p class="hint">L’export contient vos notes personnelles. Conservez-le dans un endroit privé. L’import ajoute les fiches manquantes sans remplacer les fiches existantes. Sur le compte de Quentin, l’export version 2 inclut aussi films et séries ; les exports livres version 1 restent acceptés. Un import appartient toujours au compte connecté.</p><div class="actions"><button id="export">Exporter en JSON</button><button id="import">Importer un export</button></div><input class="hidden" id="importFile" type="file" accept=".json,application/json">` : ""}${state.mode === "local" ? '<div class="actions"><button id="exitLocal">Quitter le mode local</button></div>' : ""}<div class="install"><h3>Installer sur iPhone</h3><p class="hint">Ouvrez l’adresse HTTPS dans Safari → Partager → Sur l’écran d’accueil. Autorisez la caméra seulement au moment du scan. Sur Mac, utilisez la même adresse dans Safari.</p><p class="hint">Les photos sont traitées dans votre navigateur et ne sont pas enregistrées. La reconnaissance télécharge ses modèles linguistiques. Les recherches de livres sollicitent Google Books, Open Library ou Apple Books. Pour Quentin : films via Apple puis Wikipédia/Wikimedia en secours et séries via TVmaze (données CC BY-SA 4.0, lien sur chaque fiche). Ces catalogues reçoivent le titre recherché, pas les notes ni le suivi. Aucune connexion aux plateformes de streaming. Le fonctionnement complet nécessite Internet.</p></div>`,
+    `<p class="hint">${state.mode === "cloud" ? "Votre bibliothèque est synchronisée entre vos appareils connectés au même compte. La connexion reste ouverte sur cet appareil personnel." : "Des comptes privés, des bibliothèques indépendantes. Connectez-vous avec votre propre compte. Les comptes se créent dans la console Firebase, pas sur cette page."}</p>${state.mode === "cloud" ? `<div class="notice">${state.profile?.gender === "masculin" ? "Connecté" : "Connectée"} : ${esc(state.email)} · ${esc(state.profile?.label || "Mon profil")}</div><div class="actions"><button id="logout">Me déconnecter</button></div>` : configured ? `<form id="loginForm" class="form-grid"><label class="wide">Adresse e-mail<input name="email" type="email" autocomplete="username" required maxlength="254"></label><label class="wide">Mot de passe<input name="password" type="password" autocomplete="current-password" required></label><p class="hint wide">La connexion reste ouverte sur cet appareil personnel. Utilisez « Me déconnecter » sur un appareil partagé.</p><div class="wide actions"><button class="primary" type="submit">Me connecter</button><button id="reset" type="button">Mot de passe oublié</button></div></form>` : `<div class="notice">La synchronisation privée n’est pas encore configurée. Renseignez <b>config.js</b>, créez les comptes autorisés et publiez les règles Firestore. Toutes les étapes sont dans le guide fourni.</div>`}${state.mode !== "cloud" && state.mode !== "local" ? '<div class="actions"><button id="localMode">Essayer sur cet appareil uniquement</button></div><p class="hint">Mode local partagé par les personnes utilisant ce navigateur, non chiffré, sans authentification et sans synchronisation. Pour vos bibliothèques privées, utilisez chacun votre compte connecté. Sur iPhone, Safari et l’application installée peuvent avoir des stockages distincts. Les livres locaux ne sont jamais envoyés automatiquement vers le compte.</p>' : ""}${state.mode !== "none" ? `<h3>Illustrer ma bibliothèque</h3><p class="hint">Un seul parcours pour les images manquantes, avec un filtre par type et une validation de chaque image. Les images déjà présentes sont conservées. Les titres recherchés sont envoyés aux catalogues de livres, Apple, Wikipédia ou TVmaze selon le type ; jamais vos notes ni votre suivi. Les catalogues peuvent ne proposer aucune image adaptée.</p><div class="actions"><button id="completeCovers">Compléter les images manquantes</button></div><h3>Sauvegarder ma bibliothèque</h3><p class="hint">L’export contient vos notes personnelles. Conservez-le dans un endroit privé. L’import ajoute les fiches manquantes sans remplacer les fiches existantes. Sur les comptes avec films et séries, l’export version 2 inclut aussi films et séries ; les exports livres version 1 restent acceptés. Un import appartient toujours au compte connecté.</p><div class="actions"><button id="export">Exporter en JSON</button><button id="import">Importer un export</button></div><input class="hidden" id="importFile" type="file" accept=".json,application/json">` : ""}${state.mode === "local" ? '<div class="actions"><button id="exitLocal">Quitter le mode local</button></div>' : ""}${state.mode !== "none" ? `<h3>Pour vous et notifications</h3><p class="hint">Choisissez vos genres préférés et, si votre compte les propose, les notifications.</p><div class="actions"><button id="openPrefs">Mes préférences</button></div>` : ""}<div class="install"><h3>Aide et installation</h3><div class="actions"><button id="replayTuto">Revoir le tutoriel</button></div><label class="check-label"><input type="checkbox" id="tutoStartup" ${tutorial.enabled() ? "checked" : ""}> Afficher le tutoriel au démarrage</label><h3>Installer sur iPhone ou Android</h3>${pwa.installBlock()}<p class="hint">Autorisez la caméra seulement au moment du scan.</p><p class="hint">Les photos sont traitées dans votre navigateur et ne sont pas enregistrées. La reconnaissance télécharge ses modèles linguistiques. Les recherches de livres sollicitent Google Books, Open Library ou Apple Books. Films et séries : Apple puis Wikipédia/Wikimedia en secours, TVmaze (données CC BY-SA 4.0, lien sur chaque fiche) et TMDB pour l’onglet « Pour vous » (ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB). Ces catalogues reçoivent le titre recherché, pas les notes ni le suivi. Aucune connexion aux plateformes de streaming. Le fonctionnement complet nécessite Internet.</p></div>`,
   );
   if ($("#loginForm")) {
     $("#loginForm").onsubmit = (e) => {
@@ -283,6 +291,10 @@ function settings() {
       settings();
     };
   if ($("#completeCovers")) $("#completeCovers").onclick = () => coversQueue();
+  if ($("#openPrefs")) $("#openPrefs").onclick = () => mediaUI.openPrefs();
+  if ($("#replayTuto")) $("#replayTuto").onclick = () => tutorial.start();
+  if ($("#tutoStartup")) $("#tutoStartup").onchange = (e) => tutorial.setEnabled(e.target.checked);
+  pwa.bindInstall(body, settings);
   if ($("#export")) $("#export").onclick = exportBooks;
   if ($("#import")) {
     $("#import").onclick = () => $("#importFile").click();
@@ -295,7 +307,7 @@ function settings() {
         const session=state.session, token=generation;
         const parsed = parseLibrary(await f.text(),parseImport);
         if(session!==state.session||token!==generation)throw Error('Session modifiée : import annulé.');
-        if(parsed.media.length&&!store.canMedia())throw Error('Cet export contient des films ou séries. Connectez-vous au compte de Quentin ; aucun ajout effectué.');
+        if(parsed.media.length&&!store.canMedia())throw Error('Cet export contient des films ou séries. Connectez-vous à un compte avec films et séries ; aucun ajout effectué.');
         const existing=state.books,accepted=[],acceptedMedia=[],skipped=[];
         for(const b of parsed.books){if(existing.some(x=>x.id===b.id)||accepted.some(x=>x.id===b.id)||duplicate(existing.concat(accepted),b))skipped.push(b);else accepted.push(b)}
         for(const m of parsed.media){if((state.media||[]).some(x=>x.id===m.id)||acceptedMedia.some(x=>x.id===m.id)||duplicateMedia((state.media||[]).concat(acceptedMedia),m))skipped.push(m);else acceptedMedia.push(m)}
@@ -917,6 +929,18 @@ document.addEventListener("visibilitychange", () => {
 // Pas de cache des fiches ou des réponses Firebase dans le service worker.
 if ("serviceWorker" in navigator && location.protocol === "https:")
   navigator.serviceWorker.register("./sw.js").catch(() => {});
+// Ouverture de l'onglet « Pour vous » depuis une notification ou un raccourci.
+if ("serviceWorker" in navigator)
+  navigator.serviceWorker.addEventListener("message", (e) => {
+    if (e.data?.type === "lisiere-open" && e.data.tab === "reco") mediaUI.go("reco");
+  });
+if (location.hash === "#reco") mediaUI.go("reco");
+window.addEventListener("hashchange", () => {
+  if (location.hash === "#reco") mediaUI.go("reco");
+});
+pwa.onInstallChange(() => {
+  if ($("#modal").open && $("#replayTuto") && !$("#tutoPrev")) settings();
+});
 store.initCloud().catch(() => {
   toast(
     "Synchronisation non disponible. Vérifiez config.js et votre connexion.",

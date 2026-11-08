@@ -61,7 +61,7 @@ export function createCapture(h){
 
   function media(it,s){
     if(s.mode!=='cloud'||!h.canMedia()){
-      const msg='Films et séries sont réservés au compte de Quentin. Aucune fiche créée ni copiée.';
+      const msg='Films et séries ne sont pas activés pour ce compte. Aucune fiche créée ni copiée.';
       ack(it.id,'refused',msg);h.toast(msg);return;
     }
     const wiki=it.sourceSite==='wikipedia'&&Boolean(safeSource(it.sourceUrl,'Wikipédia'));

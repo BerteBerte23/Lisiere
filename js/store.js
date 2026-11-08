@@ -1,17 +1,19 @@
 import {normalizeMedia} from './media-model.js';
 import {CONFIG} from '../config.js';
 import {normalizeBook,safeImage} from './model.js';
+import {normalizePrefs,defaultPrefs} from './prefs-model.js';
 const KEY='lisiere-local-v1';
-let mode='none',books=[],db,auth,fs,fa,stop,stopMedia,media=[],notify=()=>{},session=0,cloudUid='';
+const PREFS_KEY='lisiere-prefs-local-v1';
+let mode='none',books=[],db,auth,fs,fa,stop,stopMedia,media=[],notify=()=>{},session=0,cloudUid='',prefs=null;
 const profileFor=uid=>Array.isArray(CONFIG.profiles)?CONFIG.profiles.find(p=>p.uid===uid):null;
-export const configured=()=>Boolean(CONFIG.firebase.apiKey&&CONFIG.firebase.projectId&&CONFIG.firebase.authDomain&&CONFIG.firebase.appId&&CONFIG.profiles?.length===2&&new Set(CONFIG.profiles.map(p=>p.uid)).size===2&&CONFIG.profiles.every(p=>/^[a-zA-Z0-9_-]{1,128}$/.test(p.uid)));
-export const getState=()=>({mode,books:[...books],media:[...media],uid:cloudUid,session,email:mode==='cloud'?auth?.currentUser?.email||'':'',profile:mode==='cloud'&&profileFor(cloudUid)?{...profileFor(cloudUid)}:null});
+export const configured=()=>Boolean(CONFIG.firebase.apiKey&&CONFIG.firebase.projectId&&CONFIG.firebase.authDomain&&CONFIG.firebase.appId&&CONFIG.profiles?.length>=1&&new Set(CONFIG.profiles.map(p=>p.uid)).size===CONFIG.profiles.length&&CONFIG.profiles.every(p=>/^[a-zA-Z0-9_-]{1,128}$/.test(p.uid)));
+export const getState=()=>({mode,books:[...books],media:[...media],prefs:prefs?{...prefs}:null,prefsReady:prefs!==null,uid:cloudUid,session,email:mode==='cloud'?auth?.currentUser?.email||'':'',profile:mode==='cloud'&&profileFor(cloudUid)?{...profileFor(cloudUid)}:null});
 export function subscribe(fn){notify=fn;emit()}
 function emit(extra={}){notify({...getState(),...extra})}
-function reset(){stop?.();stopMedia?.();stop=null;stopMedia=null;books=[];media=[];cloudUid='';mode='none';session++}
+function reset(){stop?.();stopMedia?.();stop=null;stopMedia=null;books=[];media=[];prefs=null;cloudUid='';mode='none';session++}
 function context(){const uid=auth?.currentUser?.uid;if(mode!=='cloud'||uid!==cloudUid||!profileFor(uid))throw Error('Connectez-vous avant d’enregistrer.');return{uid,session}}
 function checkContext(c){if(c.session!==session||mode!=='cloud'||cloudUid!==c.uid||auth?.currentUser?.uid!==c.uid||!profileFor(c.uid))throw Error('Session modifiée : opération annulée.');}
-export function useLocal(){reset();mode='local';try{const raw=JSON.parse(localStorage.getItem(KEY)||'[]');books=Array.isArray(raw)?raw.map(b=>normalizeBook(b)):[]}catch{mode='none';emit();throw Error('Sauvegarde locale illisible. Ne la supprimez pas ; récupérez un export avant toute intervention.')}emit()}
+export function useLocal(){reset();mode='local';try{try{prefs=normalizePrefs(JSON.parse(localStorage.getItem(PREFS_KEY)||'{}'))}catch{prefs=defaultPrefs()}const raw=JSON.parse(localStorage.getItem(KEY)||'[]');books=Array.isArray(raw)?raw.map(b=>normalizeBook(b)):[]}catch{mode='none';emit();throw Error('Sauvegarde locale illisible. Ne la supprimez pas ; récupérez un export avant toute intervention.')}emit()}
 export function clearLocal(){if(mode!=='local')return;localStorage.removeItem(KEY);books=[];emit()}
 export async function initCloud(){
  if(!configured()){emit();return}
@@ -24,6 +26,8 @@ export async function initCloud(){
   if(!user){emit();return}
   if(!profileFor(user.uid)){const attempt=session;emit({error:'Ce compte n’est pas autorisé pour cette application.'});try{await a.signOut(auth)}catch{if(attempt===session)emit({error:'Compte non autorisé. Réessayez la déconnexion.'})}return}
   const uid=user.uid,currentSession=session;cloudUid=uid;mode='cloud';emit({loading:true});
+  // Préférences : un échec (règles non publiées) ne bloque jamais la bibliothèque.
+  f.getDoc(f.doc(db,'users',uid,'prefs','main')).then(snap=>{if(currentSession!==session||cloudUid!==uid)return;prefs=snap.exists()?normalizePrefs(snap.data()):defaultPrefs();emit()}).catch(()=>{if(currentSession!==session||cloudUid!==uid)return;prefs=defaultPrefs();emit()});
   if(profileFor(uid)?.media===true)stopMedia=f.onSnapshot(f.collection(db,'users',uid,'media'),snapshot=>{
    if(currentSession!==session||mode!=='cloud'||cloudUid!==uid||auth?.currentUser?.uid!==uid)return;
    media=snapshot.docs.map(d=>{try{return normalizeMedia({...d.data(),id:d.id})}catch{return null}}).filter(Boolean);emit();
@@ -50,7 +54,7 @@ export async function updateCover(id,url){
 
 // Films et séries : collection indépendante, uniquement le profil habilité.
 export function canMedia(){return mode==='cloud'&&profileFor(cloudUid)?.media===true}
-function mediaContext(){const c=context();if(!canMedia())throw Error('Films et séries sont réservés au compte de Quentin.');return c}
+function mediaContext(){const c=context();if(!canMedia())throw Error('Films et séries ne sont pas activés pour ce compte.');return c}
 export async function saveMedia(raw){const c=mediaContext(),m=normalizeMedia(raw);await fs.setDoc(fs.doc(db,'users',c.uid,'media',m.id),m);checkContext(c);return m}
 export async function removeMedia(id){const c=mediaContext();if(!/^[a-zA-Z0-9_-]{1,100}$/.test(id))throw Error('Identifiant invalide.');await fs.deleteDoc(fs.doc(db,'users',c.uid,'media',id));checkContext(c)}
 export async function importLibrary(bookItems,mediaItems){const c=mediaItems.length?mediaContext():null,currentSession=session;let added=0,skipped=0;await importBooks(bookItems);for(const raw of mediaItems){if(session!==currentSession)throw Error('Session modifiée : import interrompu.');checkContext(c);const m=normalizeMedia(raw),ref=fs.doc(db,'users',c.uid,'media',m.id);const created=await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);checkContext(c);if(snap.exists())return false;tx.set(ref,m);return true});checkContext(c);if(created)added++;else skipped++;}return{added,skipped}}
@@ -62,4 +66,13 @@ export async function updatePoster(id,candidate){
  const patch={poster:image.poster,imageCredit:image.imageCredit,imageSourceUrl:image.imageSourceUrl,imageLicenseUrl:image.imageLicenseUrl,updatedAt:new Date().toISOString()};
  const ref=fs.doc(db,'users',c.uid,'media',id);
  await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);checkContext(c);if(!snap.exists())throw Error('Cette fiche n’existe plus.');const current=snap.data();if(current.kind!==image.kind)throw Error('Le type de fiche ne correspond pas.');if(current.poster)throw Error('Une image a déjà été ajoutée. Elle a été conservée.');tx.update(ref,patch)});checkContext(c);
+}
+
+// Préférences de recommandations et de notifications.
+export async function savePrefs(raw){
+ const p=normalizePrefs(raw);
+ if(mode==='local'){try{localStorage.setItem(PREFS_KEY,JSON.stringify(p))}catch{throw Error('Stockage local plein ou bloqué.')}prefs=p;emit();return p}
+ const c=context();
+ try{await fs.setDoc(fs.doc(db,'users',c.uid,'prefs','main'),p)}catch{throw Error('Enregistrement impossible. Vérifiez la connexion et que les nouvelles règles Firestore sont publiées.')}
+ checkContext(c);prefs=p;emit();return p;
 }
